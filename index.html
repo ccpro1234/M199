@@ -832,37 +832,39 @@
             </header>
 
             <div class="max-w-6xl mx-auto space-y-8">
-                <!-- Bead Road -->
-                <div class="glass-card p-8">
-                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-                        <div>
-                            <h2 class="section-title">Bead Road</h2>
-                            <p class="text-xs mt-4" style="color: var(--text-muted);">6 rows per column - auto scroll</p>
-                        </div>
-                        <div class="flex flex-wrap gap-6">
-                            <div class="flex items-center gap-2">
-                                <div class="w-4 h-4 rounded-full" style="background: linear-gradient(135deg, var(--sapphire), #1d4ed8);"></div>
-                                <span class="text-sm font-medium">Player: <strong id="beadPlayer">0</strong></span>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <div class="w-4 h-4 rounded-full" style="background: linear-gradient(135deg, var(--ruby), #be123c);"></div>
-                                <span class="text-sm font-medium">Banker: <strong id="beadBanker">0</strong></span>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <div class="w-4 h-4 rounded-full" style="background: linear-gradient(135deg, var(--emerald), #059669);"></div>
-                                <span class="text-sm font-medium">Tie: <strong id="beadTie">0</strong></span>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <div class="w-4 h-4 rounded-full" style="background: linear-gradient(135deg, var(--gold), var(--gold-dark);"></div>
-                                <span class="text-sm font-medium">Total: <strong id="beadTotal">0</strong></span>
-                            </div>
-                        </div>
-                    </div>
-                    <div id="beadRoad" class="bead-container"></div>
-                </div>
+        <!-- Bead Road -->
+<div class="glass-card p-8">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+        <div>
+            <h2 class="section-title">Bead Road</h2>
+            <p class="text-xs mt-4" style="color: var(--text-muted);">6 rows per column - auto scroll</p>
+        </div>
+        <div class="flex flex-wrap gap-6">
+            <div class="flex items-center gap-2">
+                <div class="w-4 h-4 rounded-full" style="background: linear-gradient(135deg, var(--sapphire), #1d4ed8);"></div>
+                <span class="text-sm font-medium">Player: <strong id="beadPlayer">0</strong></span>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="w-4 h-4 rounded-full" style="background: linear-gradient(135deg, var(--ruby), #be123c);"></div>
+                <span class="text-sm font-medium">Banker: <strong id="beadBanker">0</strong></span>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="w-4 h-4 rounded-full" style="background: linear-gradient(135deg, var(--emerald), #059669);"></div>
+                <span class="text-sm font-medium">Tie: <strong id="beadTie">0</strong></span>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="w-4 h-4 rounded-full" style="background: linear-gradient(135deg, var(--gold), var(--gold-dark);"></div>
+                <span class="text-sm font-medium">Total: <strong id="beadTotal">0</strong></span>
+            </div>
+        </div>
+    </div>
+    <div id="beadRoad" class="bead-container"></div>
+</div>
 
-                <!-- Stats -->
-                <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+
+
+<!-- Stats -->
+<div class="grid grid-cols-2 md:grid-cols-5 gap-4">
                     <div class="stat-card">
                         <div class="stat-value" style="color: var(--sapphire-light);" id="totalPlayer">0</div>
                         <div class="stat-label">Player</div>
@@ -941,6 +943,8 @@
             </div>
         </div>
     </div>
+
+ 
 
     <script>
         // ===== EXPIRY CHECK =====
@@ -1127,6 +1131,9 @@
         }
 
         // App State
+
+        let top1History = []; // เก็บ W / L
+        let top1Predictions = []; // เก็บตัวแทง P/B
         let results = [];
         let patternData = [];
 
@@ -1369,6 +1376,44 @@
             }));
         }
 
+        // 🔥 👉 วางตรงนี้เลย (สำคัญ)
+function getTop1Prediction(){
+
+    if(patternData.length === 0) return 'banker';
+
+    const scored = patternData.map(p => {
+
+        const recent = p.history.slice(-10);
+
+        const win = recent.filter(x=>x.isCorrect).length;
+        const total = recent.length;
+
+        const acc = total ? (win / total) : 0;
+
+        return {
+            ...p,
+            score: acc
+        };
+    });
+
+    scored.sort((a,b)=> b.score - a.score);
+
+    const top = scored[0];
+
+    return top?.lastPrediction || 'banker';
+}
+
+// 🔥 👉 วางตรงนี้เลย (ต่อจากด้านบน)
+function getTopPatternName(){
+
+    if(patternData.length === 0) return '-';
+
+    const sorted = [...patternData].sort((a,b)=> b.accuracy - a.accuracy);
+
+    return sorted[0]?.name || '-';
+}
+
+
         function initializeApp() {
             createParticles();
             initPatternData();
@@ -1387,64 +1432,124 @@
                 container.appendChild(particle);
             }
         }
+function addResult(type) {
 
-        function addResult(type) {
-            patternData.forEach((pattern, index) => {
-                if (results.length >= 2) {
-                    const prediction = patterns[index].predict(results);
-                    const isCorrect = prediction === type && type !== 'tie';
-                    pattern.history.push({ predicted: prediction, actual: type, isCorrect });
-                    if (type !== 'tie') {
-                        if (isCorrect) pattern.correct++;
-                        else pattern.wrong++;
-                        pattern.accuracy = Math.round((pattern.correct / (pattern.correct + pattern.wrong)) * 100);
-                    }
-                }
-            });
-            results.push(type);
-            render();
-        }
+    let bet = null;
 
-        function undoLast() {
-            if (results.length === 0) return;
-            results.pop();
-            initPatternData();
-            const tempResults = [...results];
-            tempResults.forEach((result, idx) => {
-                if (idx >= 2) {
-                    patternData.forEach((pattern, pIdx) => {
-                        const prediction = patterns[pIdx].predict(tempResults.slice(0, idx));
-                        const isCorrect = prediction === result && result !== 'tie';
-                        pattern.history.push({ predicted: prediction, actual: result, isCorrect });
-                        if (result !== 'tie') {
-                            if (isCorrect) pattern.correct++;
-                            else pattern.wrong++;
-                        }
-                    });
-                }
-            });
-            patternData.forEach(p => {
-                p.accuracy = p.correct + p.wrong > 0 ? Math.round((p.correct / (p.correct + p.wrong)) * 100) : 0;
-            });
-            render();
-        }
+    // ✅ 1. เอา TOP1 ก่อนรู้ผล
+    if(type !== 'tie'){
+        bet = getTop1Prediction();
+    }
 
-        function resetAll() {
-            if (confirm('Are you sure you want to reset all data?')) {
-                results = [];
-                initPatternData();
-                render();
+    // ✅ 2. update pattern (ใช้ข้อมูลก่อนหน้า)
+    patternData.forEach((pattern, index) => {
+
+        if (results.length >= 2) {
+
+            const prediction = patterns[index].predict(results);
+
+            pattern.lastPrediction = prediction;
+
+            const isCorrect = prediction === type && type !== 'tie';
+
+            pattern.history.push({
+                predicted: prediction,
+                actual: type,
+                isCorrect
+            });
+
+            if (type !== 'tie') {
+                if (isCorrect) pattern.correct++;
+                else pattern.wrong++;
+
+                pattern.total = pattern.correct + pattern.wrong;
+
+                pattern.accuracy = pattern.total
+                    ? Math.round((pattern.correct / pattern.total) * 100)
+                    : 0;
             }
         }
+    });
 
-        function render() {
-            renderBeadRoad();
-            renderStats();
-            renderPatternRows();
-            renderRecentResults();
-            renderTopPrediction();
-            renderQuickView();
+    // ✅ 3. push ผลจริง
+    results.push(type);
+
+    // ✅ 4. บันทึก TOP1 (🔥 แก้แล้ว)
+    if(type !== 'tie' && bet){
+
+        const isWin = bet === type;
+
+        top1History.push(isWin ? 'W' : 'L');
+
+        // 🔥 สำคัญ: เก็บเป็น object
+        top1Predictions.push({
+            name: getTopPatternName(),
+            bet: bet
+        });
+
+        if(top1History.length > 50) top1History.shift();
+        if(top1Predictions.length > 50) top1Predictions.shift();
+    }
+
+    render();
+}
+
+
+      function undoLast() {
+    if (results.length === 0) return;
+
+    results.pop();
+    top1History.pop();
+    top1Predictions.pop();
+
+    initPatternData();
+
+    // re-calc ใหม่ทั้งหมด (เหมือนเดิม)
+    const tempResults = [...results];
+
+    tempResults.forEach((result, idx) => {
+        if (idx >= 2) {
+            patternData.forEach((pattern, pIdx) => {
+                const prediction = patterns[pIdx].predict(tempResults.slice(0, idx));
+                const isCorrect = prediction === result && result !== 'tie';
+
+                pattern.history.push({ predicted: prediction, actual: result, isCorrect });
+
+                if (result !== 'tie') {
+                    if (isCorrect) pattern.correct++;
+                    else pattern.wrong++;
+                }
+            });
         }
+    });
+
+    patternData.forEach(p => {
+        p.accuracy = p.correct + p.wrong > 0
+            ? Math.round((p.correct / (p.correct + p.wrong)) * 100)
+            : 0;
+    });
+
+    render();
+}
+function resetAll() {
+    if (confirm('Are you sure you want to reset all data?')) {
+        results = [];
+        top1History = [];
+        top1Predictions = [];
+        initPatternData();
+        render();
+    }
+}
+
+function render() {
+    renderBeadRoad();
+    renderStats();
+    renderPatternRows();
+    renderRecentResults();
+    renderTopPrediction();
+    renderQuickView();
+    renderTop1Only(); // 🔥 ตัวนี้
+}
 
         function renderBeadRoad() {
             const container = document.getElementById('beadRoad');
@@ -1587,28 +1692,172 @@
             document.getElementById('topWrong').textContent = top.wrong;
         }
 
-        function renderQuickView() {
-            const container = document.getElementById('quickViewContent');
-            if (!container) return;
-            const sorted = [...patternData].filter(p => p.accuracy > 0).sort((a, b) => b.accuracy - a.accuracy).slice(0, 6);
-            if (sorted.length === 0) {
-                container.innerHTML = '<div class="text-center py-6" style="color: var(--text-muted); font-size: 12px;">Need 3+ results</div>';
-                return;
-            }
-            container.innerHTML = sorted.map((p, i) => {
-                const prediction = patterns.find(pat => pat.id === p.id).predict(results);
-                const rankClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : '';
-                const rankBg = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : 'normal';
-                return `
-                    <div class="quick-item ${rankClass}">
-                        <div class="quick-rank ${rankBg}">${i + 1}</div>
-                        <div class="quick-name">${p.name.split(' ')[0]}</div>
-                        <span class="quick-bet ${prediction}">${prediction === 'player' ? 'P' : 'B'}</span>
-                        <div class="quick-percent" style="color: ${i === 0 ? 'var(--gold)' : 'var(--text-primary)'};">${p.accuracy}%</div>
-                    </div>
-                `;
-            }).join('');
+        // 🔥 👉 วางตรงนี้เลย (ถัดจากด้านบนได้เลย)
+function renderTop1Only(){
+
+    const last = top1Predictions[top1Predictions.length - 1];
+
+    const stats = getTop1Stats();
+
+    document.getElementById('top1-name').innerText = last?.name || '-';
+
+    document.getElementById('top1-bet').innerText =
+        last?.bet ? last.bet.toUpperCase() : '-';
+
+    document.getElementById('top1-rate').innerText =
+        stats.acc + '%';
+
+    document.getElementById('top1-history').innerHTML =
+        top1History.map(x =>
+            `<span style="color:${x==='W'?'#22c55e':'#ef4444'}">${x}</span>`
+        ).join(' ');
+}
+
+function renderQuickView(){
+    const container = document.getElementById('quickViewContent');
+    if (!container) return;
+
+    let html = '';
+
+    // =====================
+    // 🔝 TOP 1
+    // =====================
+    if(top1History.length > 0){
+
+        const win = top1History.filter(x=>x==='W').length;
+        const total = top1History.length;
+        const percent = total ? ((win/total)*100).toFixed(1) : 0;
+        // 🔥 % ของสายจริง (accuracy ของ pattern ปัจจุบัน)
+
+    const last = top1Predictions.length 
+    ? top1Predictions[top1Predictions.length - 1] 
+    : null;
+
+const lastBet = last?.bet;
+const lastName = last?.name;
+
+const patternPercent = patternData.find(p => p.name === lastName)?.accuracy || 0;
+
+
+
+        html += `
+        <div style="text-align:center;margin-bottom:12px">
+
+            <div style="font-size:11px;color:#aaa;">TOP 1 ONLY</div>
+
+            <!-- 🔥 ชื่อสาย -->
+    <div style="font-size:12px;color:#fff;font-weight:700;">
+        ${lastName}
+    </div>
+
+
+            <div style="
+                font-size:16px;
+                font-weight:900;
+                color:${lastBet==='player' ? '#3b82f6' : lastBet==='banker' ? '#ef4444' : '#888'};
+            ">
+                ${lastBet==='player' ? 'P' : lastBet==='banker' ? 'B' : '-'}
+            </div>
+
+            <div style="
+                font-size:20px;
+                font-weight:900;
+                color:#facc15;
+            ">
+                ${percent}% (${patternPercent}%)
+            </div>
+
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin-bottom:14px;">
+        `;
+
+        for(let i=0;i<top1History.length;i++){
+            const isWin = top1History[i] === 'W';
+
+            html += `
+            <div style="
+                height:32px;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                border-radius:10px;
+                font-weight:900;
+                background:${isWin ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)'};
+                border:1px solid ${isWin ? '#10b981' : '#ef4444'};
+                color:${isWin ? '#10b981' : '#ef4444'};
+            ">
+                ${isWin ? '✔' : '✖'}
+            </div>`;
         }
+
+        html += `</div>`;
+  
+
+} // ✅ ปิด if TOP 1 ตรงนี้
+
+
+    // =====================
+    // 📊 TOP 2–6
+    // =====================
+    const sorted = [...patternData]
+        .filter(p => p.total > 0)
+        .sort((a,b)=> (b.correct/b.total) - (a.correct/a.total))
+        .slice(1,6); // 👉 อันดับ 2-6
+
+    if(sorted.length > 0){
+
+        html += `<div style="display:flex;flex-direction:column;gap:6px;">`;
+
+        sorted.forEach((p, i) => {
+
+            const prediction = p.lastPrediction || '-';
+            const percent = p.total ? Math.round((p.correct/p.total)*100) : 0;
+
+            html += `
+            <div style="
+                display:flex;
+                align-items:center;
+                justify-content:space-between;
+                background:#0f172a;
+                padding:6px 8px;
+                border-radius:8px;
+                font-size:12px;
+            ">
+                <div style="width:24px;font-weight:800;color:#aaa;">
+                    #${i+2}
+                </div>
+
+                <div style="flex:1;text-align:center;">
+                    ${p.name.split(' ')[0]}
+                </div>
+
+                <div style="
+                    width:30px;
+                    text-align:center;
+                    font-weight:900;
+                    color:${prediction==='player'?'#3b82f6':'#ef4444'};
+                ">
+                    ${prediction==='player'?'P':'B'}
+                </div>
+
+                <div style="
+                    width:45px;
+                    text-align:right;
+                    color:#facc15;
+                    font-weight:800;
+                ">
+                    ${percent}%
+                </div>
+            </div>
+            `;
+        });
+
+        html += `</div>`;
+    }
+
+    container.innerHTML = html;
+}
 
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
